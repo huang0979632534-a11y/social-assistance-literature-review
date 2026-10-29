@@ -86,5 +86,35 @@ function searchAndReveal(){
 input.addEventListener('input',searchAndReveal);
 input.addEventListener('search',searchAndReveal);
 apply();
+
+// 自動查核同一個 GitHub Pages 目錄中的閱讀筆記 HTML 是否已發布。
+// 不修改四大分類、搜尋文字或原有的三篇閱讀連結。
+async function detectReadingNotes() {
+  const pendingPapers = papers.filter(p =>
+    p.querySelector('.pending') && p.dataset.filenameSuggestion
+  );
+  await Promise.all(pendingPapers.map(async paper => {
+    const filename = paper.dataset.filenameSuggestion;
+    // 僅接受本站同目錄的安全 HTML 檔名。
+    if (!/^[a-z0-9][a-z0-9-]*\.html$/.test(filename)) return;
+    const target = new URL(filename, window.location.href);
+    try {
+      const response = await fetch(target.href, { method: 'HEAD', cache: 'no-store' });
+      if (!response.ok) return; // 404 代表還沒有這篇筆記
+      const placeholder = paper.querySelector('.pending');
+      if (!placeholder) return;
+      const link = document.createElement('a');
+      link.className = 'openpaper'; // 沿用目前已完成筆記的按鈕美編
+      link.href = filename;
+      link.textContent = '閱讀筆記 ↗';
+      placeholder.replaceWith(link);
+    } catch (_) {
+      // 網路失敗時保留「尚未建立獨立頁面」，不影響搜尋及篩選。
+    }
+  }));
+}
+if (location.protocol === 'https:' || location.protocol === 'http:') {
+  detectReadingNotes();
+}
 })();
 </script></body></html>
